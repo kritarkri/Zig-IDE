@@ -1,0 +1,108 @@
+{
+  "name": "zig-ide-desktop",
+  "version": "1.3.10",
+  "private": true,
+  "description": "An independent cross-platform Zig IDE with automatic Zig and ZLS setup",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "concurrently -k \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && electron .\"",
+    "build": "tsc --noEmit && vite build && npm run build:electron",
+    "preview": "vite preview",
+    "start": "electron .",
+    "dist": "npm run build && electron-builder",
+    "build:electron": "tsc -p electron/tsconfig.json",
+    "predev": "npm run build:electron",
+    "dist:win": "npm run build && electron-builder --win nsis",
+    "dist:mac": "npm run build && electron-builder --mac dmg zip",
+    "dist:linux": "npm run build && electron-builder --linux AppImage deb rpm",
+    "typecheck": "tsc --noEmit && tsc -p electron/tsconfig.json --noEmit",
+    "check:toolchains": "node scripts/check-toolchain-assets.mjs"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-free": "^6.7.2",
+    "@monaco-editor/react": "^4.6.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "monaco-editor": "^0.52.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^9.1.2",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5",
+    "wait-on": "^8.0.1"
+  },
+  "build": {
+    "appId": "dev.zigide.desktop",
+    "productName": "Zig IDE",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Zig IDE",
+      "include": "build/installer.nsh"
+    },
+    "fileAssociations": [
+      {
+        "ext": "zig",
+        "name": "Zig source file",
+        "description": "Zig source code",
+        "role": "Editor",
+        "mimeType": "text/x-zig"
+      }
+    ],
+    "asar": true,
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.developer-tools",
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb",
+        "rpm"
+      ],
+      "category": "Development",
+      "synopsis": "Independent IDE for the Zig programming language",
+      "description": "Cross-platform community IDE for Zig.",
+      "mimeTypes": [
+        "text/x-zig"
+      ],
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    }
+  },
+  "author": "Zig IDE Contributors"
+}
