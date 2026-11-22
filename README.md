@@ -6,10 +6,10 @@ An independent, cross-platform desktop IDE for the [Zig programming language](ht
 
 ## Features
 
-- Monaco editor with Zig syntax highlighting and basic keyword/builtin/snippet completions.
+- Monaco editor with Zig syntax highlighting, ZLS semantic tokens (when supported by the installed ZLS), and basic keyword/builtin/snippet completions.
 - Run the active file with **F5** (`zig run`).
 - Build a standalone executable with **F6** (`zig build-exe`).
-- Run tests with **Ctrl+Shift+T** (`zig test`).
+- Run the active Zig file's tests with **Ctrl+Shift+T** (`zig test`).
 - Stop the current compiler/program process.
 - Open/save files and folders; create a project.
 - New projects ask the installed compiler to run `zig init --minimal`, generating a version-matched `build.zig` and `build.zig.zon`.
@@ -128,6 +128,10 @@ Install a ZLS release compatible with your installed Zig release. For Zig `0.17.
 - Releases: https://github.com/zigtools/zls/releases
 
 On Windows, put `zls.exe` on `PATH`, place it at `C:\zig\zls.exe`, set the `ZLS_EXE` environment variable, or choose it from **Tools → Configure ZLS language server...**. Zig and ZLS remain separate executables managed by the IDE. If ZLS is unavailable, normal editing and compiler run/build/test remain available; language intelligence features require ZLS to be installed and running.
+
+## Debugging status
+
+This release does not provide source-level debugging. Breakpoints, stepping, call-stack navigation, and variable inspection are not implemented. The Debug Console is not a debugger. LLDB integration, including investigation of the Zig-maintained LLDB fork, remains a possible future direction and is not promised for a specific release.
 
 ## Integrated terminals
 

@@ -405,6 +405,7 @@ async function listProjectFiles(root: string, relative = ''): Promise<Array<{ pa
 type PendingLspRequest = { resolve: (value: any) => void; reject: (error: Error) => void };
 let zlsProcess: ChildProcess | null = null;
 let zlsRoot: string | null = null;
+let zlsSemanticTokensLegend: { tokenTypes: string[]; tokenModifiers: string[] } | null = null;
 let zlsZigExecutable: string | null = null;
 let lspBuffer = Buffer.alloc(0);
 let lspRequestId = 1;
@@ -498,7 +499,11 @@ async function startZls(rootPath: string) {
   child.on('error', error => { mainWindow?.webContents.send('lsp:message', { type: 1, message: `ZLS process error: ${error.message}` }); zlsProcess = null; });
   child.on('close', (code, signal) => { if (zlsProcess === child) zlsProcess = null; const detail = `ZLS process closed (code: ${code ?? 'unknown'}, signal: ${signal ?? 'none'}).`; mainWindow?.webContents.send('lsp:message', { type: 2, message: detail }); for (const item of pendingLsp.values()) item.reject(new Error(`ZLS exited (${code ?? 'unknown'}).`)); pendingLsp.clear(); mainWindow?.webContents.send('lsp:status', { running: false }); });
   await new Promise<void>((resolve, reject) => { child.once('spawn', () => resolve()); child.once('error', reject); });
-  await lspRequest('initialize', { processId: process.pid, clientInfo: { name: 'Zig IDE', version: app.getVersion() }, initializationOptions: { zig_exe_path: zigExecutable }, rootUri: pathToFileURL(root + path.sep).toString(), workspaceFolders: [{ uri: pathToFileURL(root + path.sep).toString(), name: path.basename(root) }], capabilities: { textDocument: { synchronization: { didSave: true }, completion: { completionItem: { snippetSupport: true, documentationFormat: ['markdown', 'plaintext'] } }, hover: { contentFormat: ['markdown', 'plaintext'] }, definition: {}, publishDiagnostics: { relatedInformation: true } } } });
+  const initializeResult = await lspRequest('initialize', { processId: process.pid, clientInfo: { name: 'Zig IDE', version: app.getVersion() }, initializationOptions: { zig_exe_path: zigExecutable }, rootUri: pathToFileURL(root + path.sep).toString(), workspaceFolders: [{ uri: pathToFileURL(root + path.sep).toString(), name: path.basename(root) }], capabilities: { textDocument: { synchronization: { didSave: true }, completion: { completionItem: { snippetSupport: true, documentationFormat: ['markdown', 'plaintext'] } }, hover: { contentFormat: ['markdown', 'plaintext'] }, definition: {}, publishDiagnostics: { relatedInformation: true }, semanticTokens: { dynamicRegistration: false, requests: { range: false, full: true }, tokenTypes: ['namespace', 'type', 'class', 'enum', 'interface', 'struct', 'typeParameter', 'parameter', 'variable', 'property', 'enumMember', 'event', 'function', 'method', 'macro', 'keyword', 'modifier', 'comment', 'string', 'number', 'regexp', 'operator', 'decorator'], tokenModifiers: ['declaration', 'definition', 'readonly', 'static', 'deprecated', 'abstract', 'async', 'modification', 'documentation', 'defaultLibrary'], formats: ['relative'], multilineTokenSupport: false, overlappingTokenSupport: false } } } } });
+  const semanticProvider = initializeResult?.capabilities?.semanticTokensProvider;
+  zlsSemanticTokensLegend = semanticProvider?.legend?.tokenTypes && semanticProvider?.legend?.tokenModifiers
+    ? { tokenTypes: semanticProvider.legend.tokenTypes, tokenModifiers: semanticProvider.legend.tokenModifiers }
+    : null;
   writeLsp({ jsonrpc: '2.0', method: 'initialized', params: {} });
   mainWindow?.webContents.send('lsp:status', { running: true, path: executable, root });
   return { started: true, path: executable };
@@ -574,6 +579,7 @@ app.whenReady().then(async () => {
   });
   ipcMain.handle('zls:get-path', async () => resolveZlsPath());
   ipcMain.handle('zls:start', async (_event, rootPath: string) => startZls(rootPath));
+  ipcMain.handle('zls:semantic-legend', async () => zlsSemanticTokensLegend);
   ipcMain.handle('zls:request', async (_event, request: { method: string; params: unknown }) => {
     if (!zlsProcess || zlsProcess.killed) throw new Error('ZLS is not running.');
     return lspRequest(request.method, request.params);
@@ -594,7 +600,7 @@ app.whenReady().then(async () => {
     return true;
   });
   ipcMain.handle('zls:report-error', async (_event, message: string) => { mainWindow?.webContents.send('lsp:message', { type: 1, message }); return true; });
-  ipcMain.handle('zls:stop', async () => { if (!zlsProcess) return false; zlsProcess.kill(); zlsProcess = null; zlsRoot = null; return true; });
+  ipcMain.handle('zls:stop', async () => { if (!zlsProcess) return false; zlsProcess.kill(); zlsProcess = null; zlsRoot = null; zlsSemanticTokensLegend = null; return true; });
   ipcMain.handle('file:get-pending-path', async () => { const value = queuedOpenPath; queuedOpenPath = null; return value; });
   ipcMain.handle('shell:open-external', async (_event, url: string) => {
     const allowed = ['https://ziglang.org/', 'https://codeberg.org/ziglang/zig', 'https://ziglang.org/documentation/', 'https://github.com/zigtools/zls'];

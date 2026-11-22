@@ -30,6 +30,7 @@ declare global {
       stopTerminal(id?: string): Promise<boolean>;
       onTerminalData(callback: (payload: { id: string; data: string }) => void): () => void;
       startZls(rootPath: string): Promise<{ started: boolean; path: string }>;
+      getZlsSemanticLegend(): Promise<{ tokenTypes: string[]; tokenModifiers: string[] } | null>;
       getZlsPath(): Promise<string>;
       chooseZlsPath(): Promise<{ path: string } | null>;
       requestLsp(method: string, params: unknown): Promise<any>;

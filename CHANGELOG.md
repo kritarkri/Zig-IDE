@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.0
+
+- Added ZLS semantic-token highlighting when the installed language server advertises support for it. The existing local Zig tokenizer remains as a fallback.
+- Expanded built-in integer type highlighting to accept arbitrary `uN` and `iN` widths, plus Zig floating-point types including `f80`.
+- Advertised full-document semantic-token support in the LSP client capabilities.
+- Kept debugging explicitly unsupported; the Debug Console is not presented as a working debugger.
+
+
 ## 1.3.10
 
 - Added Explorer context menus for files, folders, and empty space.

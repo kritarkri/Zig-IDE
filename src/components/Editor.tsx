@@ -13,6 +13,7 @@ interface EditorProps {
 }
 
 const registeredMonaco = new WeakSet<object>();
+const registeredSemanticMonaco = new WeakSet<object>();
 
 export default function CodeEditor({ value, language, onChange, filePath, workspaceRoot, onActionsReady }: EditorProps) {
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -27,6 +28,7 @@ export default function CodeEditor({ value, language, onChange, filePath, worksp
     const root = workspaceRoot || filePath.replace(/[\\/][^\\/]+$/, '');
     void window.zigIDE.startZls(root)
       .then(() => window.zigIDE.openLspDocument(filePath, value))
+      .then(() => { const monaco = monacoRef.current; if (monaco) void registerSemanticTokensProvider(monaco); })
       .then(() => { if (!cancelled) { lspReady.current = true; documentVersion.current = 1; } })
       .catch(error => { if (!cancelled) { console.warn('ZLS is unavailable:', error); void window.zigIDE.reportLspError(`ZLS unavailable: ${String(error)}`); } });
     return () => { cancelled = true; lspReady.current = false; };
@@ -106,6 +108,28 @@ export default function CodeEditor({ value, language, onChange, filePath, worksp
     });
   };
 
+  const registerSemanticTokensProvider = async (monaco: typeof Monaco) => {
+    if (registeredSemanticMonaco.has(monaco as object)) return;
+    const legend = await window.zigIDE.getZlsSemanticLegend().catch(() => null);
+    if (!legend || !legend.tokenTypes?.length) return;
+    registeredSemanticMonaco.add(monaco as object);
+    monaco.languages.registerDocumentSemanticTokensProvider('zig', {
+      getLegend: () => ({ tokenTypes: legend.tokenTypes, tokenModifiers: legend.tokenModifiers || [] }),
+      provideDocumentSemanticTokens: async (model) => {
+        try {
+          const result = await window.zigIDE.requestLsp('textDocument/semanticTokens/full', {
+            textDocument: { uri: model.uri.toString() }
+          });
+          if (!Array.isArray(result?.data)) return { data: new Uint32Array() };
+          return { data: new Uint32Array(result.data), resultId: result.resultId };
+        } catch {
+          return { data: new Uint32Array() };
+        }
+      },
+      releaseDocumentSemanticTokens: () => undefined,
+    });
+  };
+
   return (
     <div className="h-full w-full">
       <Editor
@@ -169,7 +193,7 @@ export default function CodeEditor({ value, language, onChange, filePath, worksp
           monaco.languages.setMonarchTokensProvider('zig', {
             tokenizer: { root: [
               [/\b(pub|fn|const|var|if|else|while|for|return|break|continue|defer|errdefer|try|catch|switch|unreachable|struct|enum|union|opaque|extern|export|comptime|inline|noinline|test|async|await|suspend|resume|anytype|anyopaque|true|false|null|undefined)\b/, 'keyword'],
-              [/\b(u|i|f)(8|16|32|64|128|size)\b/, 'type'],
+              [/\b(?:[ui][0-9]+|f(?:16|32|64|80|128)|usize|isize)\b/, 'type'],
               [/\b(void|bool|usize|isize|noreturn|type|anyerror)\b/, 'type'],
               [/\b[0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?\b/, 'number'],
               [/\"([^\"\\]|\\.)*\"/, 'string'],

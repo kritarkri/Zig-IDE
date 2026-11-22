@@ -28,6 +28,7 @@ const api = {
   writeTerminal: (input: string, id = 'terminal-1') => ipcRenderer.invoke('terminal:write', { id, input }),
   stopTerminal: (id?: string) => ipcRenderer.invoke('terminal:stop', id),
   startZls: (rootPath: string) => ipcRenderer.invoke('zls:start', rootPath),
+  getZlsSemanticLegend: () => ipcRenderer.invoke('zls:semantic-legend'),
   getZlsPath: (): Promise<string> => ipcRenderer.invoke('zls:get-path'),
   chooseZlsPath: () => ipcRenderer.invoke('zls:choose-path'),
   requestLsp: (method: string, params: unknown) => ipcRenderer.invoke('zls:request', { method, params }),

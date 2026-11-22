@@ -1,6 +1,6 @@
 {
   "name": "zig-ide-desktop",
-  "version": "1.3.10",
+  "version": "1.4.0",
   "private": true,
   "description": "An independent cross-platform Zig IDE with automatic Zig and ZLS setup",
   "main": "dist-electron/main.js",
